@@ -18,8 +18,9 @@ def print_board(board):
     '''
     This routine prints out the board
     '''
+    print("\n")   
     for x in board:
-        print(*x)
+        print("".join(x))
     print("\n")
 
 def find_winner(board):
