@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from copy import deepcopy
 from operator import itemgetter
+from random import choice
 
 def draw_map(name, planar_map, size, color_assignments=None):
     def as_dictionary(a_list):
@@ -26,22 +27,62 @@ def draw_map(name, planar_map, size, color_assignments=None):
     plt.savefig(name + ".png")
 
 def build_neighbors_dict(total_nodes, edges):
+    '''
+    This routine creates a neighbor dictionary for all nodes.
+
+    Args:
+        total_nodes - The total nodes in the map
+        edges       - All the connections on the map
+    Returns:
+        A dictionary of node to neighbors
+    '''
     # Build a dictionary that contains all the neighbors
     connected_to = [[x[1] for x in edges if x[0] == y] for y in range(total_nodes)]
     connected_from = [[x[0] for x in edges if x[1] == y] for y in range(total_nodes)]
     total = [x + y for x, y in zip(connected_from, connected_to)]
     return {key: total[key] for key in range(total_nodes)}
 
-def valid_assignment(node, color, neighbors, assignments):
-    neighbor_colors = [assignments[key] for key in neighbors[node]]
+def valid_assignment(color, neighbors, assignments, named_node, trace):
+    '''
+    This routine determines if the node color assignment is valid
+
+    Args:
+        node - The node to check
+        color - The color of the node
+        neighbors - The neighbors of the node
+        assignments - The current color assignments
+        named_node - The name of the node
+        trace - A flag for printing
+    Returns:
+        True if the color is not selected for a neighbor
+        False otherwise
+    '''
+    neighbor_colors = [assignments[key] for key in neighbors]
+    if trace:
+        print(named_node, "assignment is", color, ". Neighboring colors are:", *neighbor_colors)
     # Determine if the color for this node has
     # been chosen for the neighbor nodes
     return color not in neighbor_colors
 
-def forward_check(assignments, node, domains, neighbors):
+def forward_check(assignments, node, domains, neighbors, named_nodes, trace):
+    '''
+    This routine performs forward checking
+
+    Args:
+        assignments - The current color assignments
+        node - The node to forward check
+        neighbors - The neighbors
+        trace - A flag for printin
+        names_nodes - List of all node names
+    Returns:
+        A dictionary of updated domains
+    '''
+    if trace:
+        print("Performing forward check removing", assignments[node], "from:")
+        print(*[named_nodes[x] for x in neighbors])
     # Copy the current domains
     next_domains = deepcopy(domains)
-    # Iterate over the neighbord of the node
+    # Iterate over the neighbors of the node
     for neighbor in neighbors[node]:
         # If neighbor has not be assigned remove the
         # color that was assigned to the node
@@ -53,39 +94,103 @@ def forward_check(assignments, node, domains, neighbors):
     # Return the next domains
     return next_domains
 
-def degree_heuristic(neighbors, assignments):
+def degree_heuristic(neighbors, assignments, trace):
+    '''
+    This routine selects variables based on the
+    degree heuristic. The node with most neighbors
+    is selected
+
+    Args:
+        neighbors - The list of neighbors
+        assignments - The current assignments
+        trace - A flag for printin
+    Returns:
+        The selected node/variable
+    '''
+    if trace:
+        print("\nSelecting a variable based on degree heuristic")
     # Determine which variables are not assigned, get their total neighbors, and
     # create a tuple of (node, total neighbors)    
     total = [(node, len(neighbors[node])) for node in assignments.keys() if assignments[node] is None]
-    # Return the node with the larger neighbor count
-    return max(total,key=itemgetter(1))[0]
+    # Find the node with the most neighbors
+    max_tuple = max(total,key=itemgetter(1))
+    # Create a list with other nodes of the same value
+    maxes = [x for x in total if x[1] == max_tuple[1]]
+    # Pick a node out of the list
+    return choice(maxes)[0]
 
-def print_dict(dict_stuff):
-    for key in dict_stuff.keys():
-        print("Node:", key, "Values:", dict_stuff[key])
-    print("\n")
+def least_constraining_value(node, domains, neighbors, named_node, trace):
+    '''
+    This routines performs the LCV heuristic.
 
-def backtracking(assignments, neighbors, domains, prev_domains):
+    Args:
+        node - The node
+        domains - The domains for all the nodes
+        neighbors - the list of neighboard
+        named_node - The name of the node
+        trace - A flag for printin
+    Returns:
+        A list of values from starting from the LCV
+    '''
+    if trace:
+        print("Determining", named_node, "least constraining values")
+    # Create a counts dict based on the current domain
+    # for the node
+    counts = {key: 0 for key in domains[node]}
+    # Iterate over the colors
+    for key in counts.keys():
+        # Iterate over each neighbor
+        for neighbor in neighbors:
+            # If the neighbor has the color then
+            # increment the list
+            if key in domains[neighbor]:
+                counts[key] += 1
+    # Return a list of colors by incrementing counts
+    return sorted(key for (key, value) in counts.items())
+
+def backtracking(assignments, neighbors, domains, next_domains, named_nodes, trace):
+    '''
+    The backtracking algorithm
+
+    Args:
+        assignments - the assignments
+        neighbors - the dictionary of nodes to neighbors
+        domains - the dictionary of domains for the nodes
+        next_domains - the next domains
+        named_nodes - the names of all the nodes
+        trace - A flag for printin
+    Returns:
+        Assignments - all nodes assignents
+        None - No assignments
+    '''
     # Return when all the variables have been assigned
     # a solution has been found
     if not None in assignments.values():
         return assignments
     # Select a variable/node based using degree heuristic
-    node = degree_heuristic(neighbors, assignments)
-    # Iterate over each color that is available to the node
-    for color in domains[node]:
+    node = degree_heuristic(neighbors, assignments, trace)
+    named_node = named_nodes[node]
+    if trace:
+        print(named_node, "was selected")
+    # Iterate over each color that is available to the node base on the
+    # least contraining value heuristic
+    for color in least_constraining_value(node, domains, neighbors[node], named_node, trace):
+        if trace:
+            print("Trying color", color, "for", named_node)
         # Determine if the color for the node is a valid assignment 
-        if valid_assignment(node, color, neighbors, assignments):
+        if valid_assignment(color, neighbors[node], assignments, named_node, trace):
             # Assign the color to the node
             assignments[node] = color
             # Perform forward checking and obtain an updated
             # domain set
-            next_domains = forward_check(assignments, node, domains, neighbors)
+            next_domains = forward_check(assignments, node, domains, neighbors, named_nodes, trace)
             # Recursive call to backtracking
-            result = backtracking(assignments, neighbors, domains, next_domains)
+            result = backtracking(assignments, neighbors, domains, next_domains, named_nodes, trace)
             # Only return the result when not None
             if result != None:
                 return result
+        if trace:
+            print("No valid assignments for", named_nodes[node], "removing assignment\n")
         # Set the assignment for the node to None. This is the
         # backtracking portion. If this is reached then there
         # are no valid assignments or the recursive call
@@ -111,12 +216,10 @@ def color_map( planar_map, colors, trace=False):
     assignments = {key: None for key in range(len(planar_map["nodes"]))}
     # Create a dict with all the colors for all nodes
     domains = {key: deepcopy(colors) for key in range(len(planar_map["nodes"]))}
-    # Previous domains
-    prev_domains = {key: [] for key in range(len(planar_map["nodes"]))}
     # Build the neighbors dictionary
     neighbors = build_neighbors_dict(len(assignments.keys()), planar_map["edges"])
     # Start the backtracking algorithm
-    assignments = backtracking(assignments, neighbors, domains, prev_domains)
+    assignments = backtracking(assignments, neighbors, domains, None, planar_map["nodes"], trace)
     # Make sure the correct data is returned
     if assignments is None:
         return None
@@ -186,7 +289,7 @@ def assign_and_test_coloring(name, planar_map, colors, trace=False):
     if coloring:
         print(f"{len(colors)} colors assigned to {name}.")
         test_coloring(planar_map, coloring)
-        draw_map(name, planar_map, (6,6), coloring)
+        draw_map(name, planar_map, (8,8), coloring)
     else:
         print(f"{name} cannot be colored with {len(colors)} colors.")
 
@@ -194,21 +297,21 @@ if __name__ == "__main__":
     debug = len(sys.argv) > 1 and sys.argv[1].lower() == 'debug'
 
     ## edit these to indicate what you implemented.
-    print("Backtracking...", "?")
-    print("Forward Checking...", "?")
-    print("Minimum Remaining Values...", "?")
-    print("Degree Heuristic...", "?")
-    print("Least Constraining Values...", "?")
+    print("Backtracking...", "Y")
+    print("Forward Checking...", "Y")
+    print("Minimum Remaining Values...", "N")
+    print("Degree Heuristic...", "Y")
+    print("Least Constraining Values...", "Y")
     print("")
 
     three_colors = ["red", "blue", "green"]
     four_colors = ["red", "blue", "green", "yellow"]
 
     # Easy Map
-    assign_and_test_coloring("Connecticut", connecticut, four_colors, trace=debug)
-    assign_and_test_coloring("Connecticut", connecticut, three_colors, trace=debug)
+    assign_and_test_coloring("Connecticut_4", connecticut, four_colors, trace=debug)
+    assign_and_test_coloring("Connecticut_3", connecticut, three_colors, trace=debug)
     # Difficult Map
-    assign_and_test_coloring("Europe", europe, four_colors, trace=debug)
-    assign_and_test_coloring("Europe", europe, three_colors, trace=debug)
+    assign_and_test_coloring("Europe_4", europe, four_colors, trace=debug)
+    assign_and_test_coloring("Europe_3", europe, three_colors, trace=debug)
 
     
