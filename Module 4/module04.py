@@ -85,7 +85,8 @@ def initialize_q_table(x_size, y_size, actions):
   return q_table
 
 def get_action(state, q_table):
-  pass
+  x, y = state
+  return max(q_table[y][x].keys(), key=lambda k: q_table[y][x][k])
 
 def calculate_q_value(alpha, gamma, state, action, reward, next_state, q_table):
   '''
@@ -93,21 +94,37 @@ def calculate_q_value(alpha, gamma, state, action, reward, next_state, q_table):
   '''
   x, y = state
   x1, y1 = next_state
-  max_q_next = max(q_table[y1][x1].keys(), key=lambda k: q_table[y1][x1][k])
+  max_q_next = get_action(next_state, q_table)
   q_table[y][x][action] = (1 - alpha) * q_table[y][x][action] + alpha * (reward + gamma*q_table[y1][x1][max_q_next])
 
+def get_rewards(state, rewards, world):
+  x, y = state
+  try:
+    return rewards[world[y][x]]
+  except:
+    return -100
+
 def q_learning(world, costs, goal, reward, actions, gamma, alpha):
-    q_table = initialize_q_table(len(world[0]), len(world), actions)
-    return
+  # Create the Q table initialied to 0.0
+  q_table = initialize_q_table(len(world[0]), len(world), actions)
+  # Initialize the state
+  state = (0,0)
+  # Obtain an action
+  action = get_action(state, q_table)
+  # Determine the next state
+  next_state = tuple(map(add, state, action))
+  calculate_q_value(alpha, gamma, state, action, get_rewards(state,reward,world), next_state, q_table)
+  print(q_table[0][0][action])
+  return
 
 def pretty_print_policy(rows, cols, policy):
     pass
 
 if __name__ == "__main__":
     goal = (5, 6)
-    gamma = 0.0  # FILL ME IN
-    alpha = 0.0  # FILL ME IN
-    reward = 0.0  # FILL ME IN
+    gamma = 0.9  # FILL ME IN
+    alpha = 0.5  # FILL ME IN
+    reward = costs #0.0  # FILL ME IN
     test_policy = q_learning(test_world, costs, goal, reward, cardinal_moves, gamma, alpha)
     # rows = 0  # FILL ME IN
     # cols = 0  # FILL ME IN
