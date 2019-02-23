@@ -60,40 +60,32 @@ def initialize_q_table(x_size, y_size, actions):
   '''
   all_actions = {key: 0.0 for key in actions}
   return [[deepcopy(all_actions) for x in range(x_size)] for y in range(y_size)]
-  # minus_down = {key: 0.0 for key in actions[:2]+actions[3:]}
-  # minus_right = {key: 0.0 for key in actions[:1]+actions[2:]}
-  # minus_up = {key: 0.0 for key in actions[1:]}
-  # minus_left = {key: 0.0 for key in actions[:-1]}
-  # # Build the inner world
-  # q_table = [[deepcopy(all_actions) for x in range(x_size-2)] for y in range(y_size-2)]
-  # # Build the top most and bottom most rows
-  # q_table.append([])
-  # q_table[len(q_table)-1] = [deepcopy(minus_down) for x in range(x_size-2)]
-  # q_table.reverse()
-  # q_table.append([])
-  # q_table[len(q_table)-1] = [deepcopy(minus_up) for x in range(x_size-2)]
-  # q_table.reverse()
-  # # Build the left most and right most portions of the world
-  # q_table = list(zip(*q_table))
-  # q_table.append([])
-  # q_table[len(q_table)-1] = [deepcopy(minus_right) for y in range(len(q_table[0]))]
-  # q_table.reverse()
-  # q_table.append([])
-  # q_table[len(q_table)-1] = [deepcopy(minus_left) for y in range(len(q_table[0]))]
-  # q_table.reverse()
-  # q_table = list(zip(*q_table))
-  # # Remove the actions not needed on the corners of the world
-  # q_table[0][0].pop((0,-1))
-  # q_table[0][x_size-1].pop((0,-1))
-  # q_table[y_size-1][0].pop((0,1))
-  # q_table[y_size-1][x_size-1].pop((0,1))
-  # return q_table
 
 def get_best_q_action(state, q_table):
+  '''
+  This routine returns the best action
+
+  Args:
+      state - The state
+      q_table - The q tables
+  Returns:
+      The best action based on Q
+  '''
   x,y = state
   return max(q_table[y][x].keys(), key=lambda k: q_table[y][x][k])
 
 def get_action(state, q_table):
+  '''
+  This routine gets an action on the given state. The best
+  Q action is returned if a random number is <= 0.7. Otherwise
+  a random action is returned that is not the best q action
+
+  Args:
+      state - The state
+      q_table - The q table
+  Returns:
+      An action
+  '''
   x, y = state
   actions = list(q_table[y][x].keys())
   selected_action = max(q_table[y][x].keys(), key=lambda k: q_table[y][x][k])
@@ -107,6 +99,18 @@ def get_action(state, q_table):
     return selected_action, sysrand.choice(actions)
 
 def determine_next_state_and_reward(state, action, rewards, world, goal):
+  '''
+  This routine determines the next state and assocated reward
+
+  Args:
+      state - The state
+      action - The action
+      rewards - The rewards
+      world - The world
+      goal - The goal state
+  Returns:
+      The next state and reward
+  '''
   IMPASSABLE_REWARD = -100
   GOAL_REWARD = 100
   # Determine the next state
@@ -131,6 +135,17 @@ def determine_next_state_and_reward(state, action, rewards, world, goal):
 def calculate_q_value(alpha, gamma, state, action, reward, next_state, q_table):
   '''
   This routine updates the Q value for the state and action
+
+  Args:
+      alpha - The learning rate
+      gamma - The discount factor
+      state - The state
+      action - The action
+      reward - The reward
+      next_state - The next state
+      q_table - The Q table
+  Returns:
+      Nothing
   '''
   x, y = state
   x1, y1 = next_state
@@ -138,9 +153,22 @@ def calculate_q_value(alpha, gamma, state, action, reward, next_state, q_table):
   q_table[y][x][action] = (1 - alpha) * q_table[y][x][action] + alpha * (reward + gamma*q_table[y1][x1][max_q_next])
 
 def q_learning(world, costs, goal, reward, actions, gamma, alpha):
+  '''
+  The Q learning algorithm
+
+  Args:
+      world - The worled
+      costs - The costs for each state
+      goal  - The goal state
+      actions - The actions allowed within the world
+      gamma - The discount factor
+      alpha - The learning rate
+  Returns:
+      The policy
+  '''
   # Create the Q table initialied to 0.0
   q_table = initialize_q_table(len(world[0]), len(world), actions)
-  for x in range(100):
+  for x in range(1):
     print(x)
     # Initialize the state
     state = (0,0)
@@ -153,6 +181,8 @@ def q_learning(world, costs, goal, reward, actions, gamma, alpha):
       calculate_q_value(alpha, gamma, state, selected_action, next_reward, next_state, q_table)
       state = next_state
   policy = {}
+  # Iterate over the Q table and selected the
+  # best action to build the policy
   for y in range(len(q_table)):
     for x in range(len(q_table[y])):
       if (x, y) != goal:
@@ -166,7 +196,6 @@ def pretty_print_policy(rows, cols, policy):
     for y in range(rows):
       for x in range(cols):
         print(directions[policy[(x,y)]], end='' if x < cols-1 else '\n')
-        #print(directions[policy[(cols, row)]]), end='' if cols < cols-1 else '\n')
 
 if __name__ == "__main__":
     goal = (5, 6)
@@ -185,8 +214,7 @@ if __name__ == "__main__":
     alpha = 0.3  # FILL ME IN
     reward = costs  # FILL ME IN
     full_policy = q_learning(full_world, costs, goal, reward, cardinal_moves, gamma, alpha)
-    print(len(full_policy))
-    rows = len(full_policy)
-    cols = len(full_policy[0])
+    rows = len(full_world)
+    cols = len(full_world[0])
     pretty_print_policy(rows, cols, full_policy)
     print()
