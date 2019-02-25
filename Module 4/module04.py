@@ -152,6 +152,28 @@ def calculate_q_value(alpha, gamma, state, action, reward, next_state, q_table):
   max_q_next = get_best_q_action(next_state, q_table)
   q_table[y][x][action] = (1 - alpha) * q_table[y][x][action] + alpha * (reward + gamma*q_table[y1][x1][max_q_next])
 
+# def get_state(states, episode, current_state):
+#   '''
+#   This routine gets a state
+
+#   Args:
+#       states - The states list
+#       episode - The episode
+#       current_state - The current state
+#   Returns:
+#       A state
+#   '''
+#   # If episode % 40 return a different state
+#   # otherwise return the current state.
+#   # If the list is empty return (0,0)
+#   try:
+#     if episode % 250 == 0:
+#       return states.pop()
+#     else:
+#       return current_state
+#   except:
+#     return (0,0)
+
 def q_learning(world, costs, goal, reward, actions, gamma, alpha):
   '''
   The Q learning algorithm
@@ -168,8 +190,13 @@ def q_learning(world, costs, goal, reward, actions, gamma, alpha):
   '''
   # Create the Q table initialied to 0.0
   q_table = initialize_q_table(len(world[0]), len(world), actions)
-  for x in range(1):
-    print(x)
+  # # Create a list of states each state will be a diagnol point.
+  # quater_inc = len(world) // 4
+  # points = list(range(0, (len(world) - quater_inc), quater_inc))
+  # states = [(x, x) for x in points]
+  # states.reverse()
+  # state = states.pop()
+  for episode in range(200):
     # Initialize the state
     state = (0,0)
     while state != goal:
@@ -192,27 +219,38 @@ def q_learning(world, costs, goal, reward, actions, gamma, alpha):
   return policy
 
 def pretty_print_policy(rows, cols, policy):
-    directions = {(0, 1): 'v', (0, -1): '^', (1, 0): '>', (-1, 0): '<', (0, 0): 'G'}
-    for y in range(rows):
-      for x in range(cols):
-        print(directions[policy[(x,y)]], end='' if x < cols-1 else '\n')
+  '''
+  This routine prints out the policy for the size of the world
+
+  Args:
+      rows - The total rows in the world
+      cols - The total columns in the world
+  Returns:
+      Nothing
+  '''
+  # Dictionary for each actions text representation
+  directions = {(0, 1): 'v', (0, -1): '^', (1, 0): '>', (-1, 0): '<', (0, 0): 'G'}
+  # Iterate over the rows and cols and print the
+  # corresponding action
+  for y in range(rows):
+    for x in range(cols):
+      print(directions[policy[(x,y)]], end='' if x < cols-1 else '\n')
 
 if __name__ == "__main__":
     goal = (5, 6)
-    gamma = 0.9  # FILL ME IN
-    alpha = 0.2  # FILL ME IN
-    reward = costs #0.0  # FILL ME IN
+    gamma = 0.9
+    alpha = 0.3
+    reward = costs
     test_policy = q_learning(test_world, costs, goal, reward, cardinal_moves, gamma, alpha)
     rows = len(test_world)
     cols = len(test_world[0])
     pretty_print_policy(rows, cols, test_policy)
-    
     print()
 
     goal = (26, 26)
-    gamma = 0.9 # FILL ME IN
-    alpha = 0.3  # FILL ME IN
-    reward = costs  # FILL ME IN
+    gamma = 0.7
+    alpha = 0.15
+    reward = costs
     full_policy = q_learning(full_world, costs, goal, reward, cardinal_moves, gamma, alpha)
     rows = len(full_world)
     cols = len(full_world[0])
