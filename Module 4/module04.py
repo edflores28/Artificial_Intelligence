@@ -4,6 +4,7 @@ from copy import deepcopy
 from operator import add
 
 sysrand = random.SystemRandom()
+EPISODES = 500
 
 full_world = [
   ['.', '.', '.', '.', '.', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'], 
@@ -152,28 +153,6 @@ def calculate_q_value(alpha, gamma, state, action, reward, next_state, q_table):
   max_q_next = get_best_q_action(next_state, q_table)
   q_table[y][x][action] = (1 - alpha) * q_table[y][x][action] + alpha * (reward + gamma*q_table[y1][x1][max_q_next])
 
-# def get_state(states, episode, current_state):
-#   '''
-#   This routine gets a state
-
-#   Args:
-#       states - The states list
-#       episode - The episode
-#       current_state - The current state
-#   Returns:
-#       A state
-#   '''
-#   # If episode % 40 return a different state
-#   # otherwise return the current state.
-#   # If the list is empty return (0,0)
-#   try:
-#     if episode % 250 == 0:
-#       return states.pop()
-#     else:
-#       return current_state
-#   except:
-#     return (0,0)
-
 def q_learning(world, costs, goal, reward, actions, gamma, alpha):
   '''
   The Q learning algorithm
@@ -188,15 +167,13 @@ def q_learning(world, costs, goal, reward, actions, gamma, alpha):
   Returns:
       The policy
   '''
+  print("Total episodes", EPISODES)
   # Create the Q table initialied to 0.0
   q_table = initialize_q_table(len(world[0]), len(world), actions)
-  # # Create a list of states each state will be a diagnol point.
-  # quater_inc = len(world) // 4
-  # points = list(range(0, (len(world) - quater_inc), quater_inc))
-  # states = [(x, x) for x in points]
-  # states.reverse()
-  # state = states.pop()
-  for episode in range(200):
+  # Iterate over all the episodes
+  for episode in range(EPISODES):
+    if len(world) > 10 and episode % 100 == 0:
+      print("Episode:", episode+1)
     # Initialize the state
     state = (0,0)
     while state != goal:
@@ -241,6 +218,7 @@ if __name__ == "__main__":
     gamma = 0.9
     alpha = 0.3
     reward = costs
+    print("Test World Start")
     test_policy = q_learning(test_world, costs, goal, reward, cardinal_moves, gamma, alpha)
     rows = len(test_world)
     cols = len(test_world[0])
@@ -251,6 +229,7 @@ if __name__ == "__main__":
     gamma = 0.7
     alpha = 0.15
     reward = costs
+    print("Full World Start")
     full_policy = q_learning(full_world, costs, goal, reward, cardinal_moves, gamma, alpha)
     rows = len(full_world)
     cols = len(full_world[0])
