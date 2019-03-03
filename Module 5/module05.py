@@ -49,11 +49,16 @@ def generate_population(size, function, minimization, is_binary):
     population = []
     values = []
     multiplier = 1
+    # Binary ga only uses values list of 0 and 1
+    # Otherwise for real ga set values list
+    # to -5.12 to 5.12
     if is_binary:
         values = [0, 1]
         multiplier = TOTAL_VARIABLES
     else:
         values = list(float_range(-5.12, 5.12, Decimal('0.01')))
+    # Create the populate for the desired size and also
+    # calculate the fitness scores
     while len(population) < size:
         individual = deepcopy([choice(values) for x in range(TOTAL_VARIABLES*multiplier)])
         score = []
@@ -140,12 +145,18 @@ def mutate_single(individual, rate, is_binary, sigma):
         A mutated individual
     '''
     length = len(individual)
+    # Iterate over the length
     for x in range(length):
+        # Generate a random value and if less than
+        # the rate/length mutate.
         if random() <= rate/length:
+            # Flip the bit for binary individual
             if is_binary:
                 individual[x] = 1 if individual[x] == 0 else 0
+            # Otherwise add some noise to real values
             else:
                 individual[x] += gauss(0.0, sigma)
+                # Contrain the individual to the range
                 if individual[x] > 5.12:
                     individual[x] = 5.12
                 if individual[x] < -5.12:
@@ -304,25 +315,25 @@ if __name__ == "__main__":
     parameters = {
         "f": lambda xs: shifted_sphere( 0.5, xs),
         "minimization": True,
-        "crossover_rate": 0.9,
+        "crossover_rate": 0.8,
         "mutation_rate": 0.05,
-        "generations": 1000,
-        "tournament_total": 20,
-        "population": 800,
-        "sigma": 0
+        "generations": 800,
+        "tournament_total": 15,
+        "population": 500,
+        "sigma": 0 # Not used for binary ga, still needs to be defined.
     }
     print("Executing Binary GA")
-    #binary_ga(parameters, debug)
+    binary_ga(parameters, debug)
 
     parameters = {
         "f": lambda xs: shifted_sphere( 0.5, xs),
         "minimization": True,
-        "crossover_rate": 0.8,
+        "crossover_rate": 0.9,
         "mutation_rate": 0.1,
-        "generations": 400,
+        "generations": 800,
         "tournament_total": 15,
-        "population": 600,
-        "sigma": 1
+        "population": 500,
+        "sigma": 0.7
     }
     print("Executing Real-Valued GA")
     real_ga(parameters, debug)
