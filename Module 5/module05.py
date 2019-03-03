@@ -287,16 +287,15 @@ def generic_algorithm(parameters, debug, is_binary):
         # Add the children back to the population
         population.append(child_1)
         population.append(child_2)
-        # Only print the best individual on the last generation
-        # if debug is False
-        if not debug and generation == parameters['generations'] - 1:
-            print("\nGenetic Algorithm Complete")
-            print("Best Fit Individual:")
-            print_indv(get_best_fit(population), parameters['f'], is_binary, debug)
-            
         if debug:
             print("Generation", generation + 1)
             print_indv(get_best_fit(population), parameters['f'], is_binary, debug)
+    # Only print the best individual on the last generation
+    # if debug is False
+    if not debug:
+        print("\nGenetic Algorithm Complete")
+        print("Best Fit Individual:")
+        print_indv(get_best_fit(population), parameters['f'], is_binary, debug)
 
 def binary_ga(parameters, debug):
     print_params(parameters, True)
