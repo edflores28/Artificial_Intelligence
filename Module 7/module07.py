@@ -321,7 +321,6 @@ def forward_planner( start_state, goal, actions, debug=False):
             plan.append(current_state[1])
         # If the current state is the goal state
         # return the plan
-        print(current_state[0])
         if compare_lists(current_state[0], goal_state):
             return build_plan(plan, debug)
         # Determine the successors of the current state and
