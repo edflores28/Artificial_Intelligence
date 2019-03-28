@@ -52,7 +52,8 @@ def learn_linear_regression(data, debug=False):
     previous_error = 0.0
     current_error = calculate_error(thetas, x, y)
     alpha = 0.1
-
+    new_thetas = np.array([0.0 for x in range(len(thetas))])
+    print(current_error, new_thetas[0])
 
 
 
