@@ -27,13 +27,18 @@ def split_data(data):
     x = np_array[:, :-1]
     return np.hstack((np.ones((len(x), 1)), x)), np_array[:, -1]
 
-def calculate_error(thetas, x, y):
+def calculate_y_hats(thetas, x):
+    return np.dot(x, thetas)
 
-    y_hats = np.sum(np.multiply(thetas, x), axis=1)
-    differences = np.subtract(y_hats, y)
-    squared = np.square(differences)
-    error = np.sum(squared) / len(y)
-    return error
+def calculate_error(y, y_hat):
+    return np.sum((y_hat - y)**2)/2*len(y)
+    
+def calculate_derivative(x, y, y_hat):
+    print(x)
+    print(x.T)
+    print(y_hat)
+    print(y)
+    print(np.dot(x, y_hat-y))
 
 def learn_linear_regression(data, debug=False):
     """
@@ -50,11 +55,13 @@ def learn_linear_regression(data, debug=False):
     x, y = split_data(data)
     thetas = np.random.uniform(-1.0, 1.0, len(x[0]))
     previous_error = 0.0
-    current_error = calculate_error(thetas, x, y)
+    y_hat = calculate_y_hats(thetas, x)
+    current_error = calculate_error(y, y_hat)
     alpha = 0.1
-    new_thetas = np.array([0.0 for x in range(len(thetas))])
-    print(current_error, new_thetas[0])
-
+    new_thetas = np.array([0.0 for theta in range(len(thetas))])
+    # for theta in range(len(new_thetas)):
+    #     new_thetas[theta] = thetas[theta] - alpha * calculate_derivative()
+    print(calculate_derivative(x, y, y_hat))
 
 
 def learn_logistic_regression(data, debug=False):
