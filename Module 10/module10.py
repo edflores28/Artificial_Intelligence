@@ -183,14 +183,14 @@ def learn_model(data, n_hidden, debug=False):
     # Set the bias value at hidden_layer[0]
     #hidden_layer[0] = 1.0
     # The learning rate
-    alpha = 0.001
+    alpha = 0.01
     # The value for epsilon
-    epsilon = 1e-7
+    epsilon = 1e-3
     previous_error = 0.0
     current_error = 0.0
     counter = 0
     while True:
-        current_error = 0.0
+        current_error = 0
         for index in range(len(x)):
             # Calculate the hidden and output layers y hats
             hidden_layer, output_layer = feed_forward(hidden_thetas, output_thetas, x[index])
@@ -204,13 +204,16 @@ def learn_model(data, n_hidden, debug=False):
             for theta in range(len(output_thetas)):
                 output_thetas[theta] = update_thetas(output_thetas[theta], output_deltas[theta], hidden_layer, alpha)
             current_error += calculate_error(output_layer, y[index])
+        current_error /= len(y)
         if abs(current_error - previous_error) < epsilon:
-            break
+            break    
         previous_error = current_error
         counter += 1
-        if counter == 500 and debug:
+        if counter == 1000 and debug:
             print("Current Error:", current_error)
             counter = 0
+            if current_error > previous_error:
+                alpha /= 10
     return hidden_thetas.tolist(),output_thetas.tolist()
 
 def apply_model(model, data, labeled=False):
@@ -222,9 +225,9 @@ def apply_model(model, data, labeled=False):
             max_index = np.argmax(output_layer)
             converted = [0 for i in range(len(output_layer))]
             converted[max_index] = 1
-            results.append([(y[index][i], int(converted[i])) for i in range(len(y[index]))])
+            results.append([(int(y[index][i]), converted[i]) for i in range(len(y[index]))])
         else:
-            results.append([(y[index][i], output_layer[i]) for i in range(len(y[index]))])
+            results.append([(int(y[index][i]), output_layer[i]) for i in range(len(y[index]))])
     return results
 
 def evaluate_results(results):
