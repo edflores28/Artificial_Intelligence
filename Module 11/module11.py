@@ -1,8 +1,9 @@
 import sys
 import csv
+import numpy as np
 from collections import Counter
 from copy import deepcopy
-import numpy as np
+from random import shuffle
 
 class Node:
     def __init__(self, feature):
@@ -21,11 +22,19 @@ class Node:
     def get_children(self):
         return self.children
 
-    def display(self):
-        print("feature", self.feature)
-        print("children", self.children)
+def create_folds(data, k):
+    '''
+    This routine reads the csv file and
+    creates k folds of the data set
+    '''
+    shuffle(data)
+    fold_len = int(len(data)/k)
+    return [data[i:i+fold_len] for i in range(0, len(data), fold_len)]
 
 def entropy(feature):
+    '''
+    This routine calculates the entropy of the feature
+    '''
     # Obtain the unique counts of the feature set
     unique, counts = np.unique(feature, return_counts=True)
     # Set the probabilities accordingly
@@ -34,6 +43,9 @@ def entropy(feature):
     return np.sum(np.negative(p)*np.log2(p))
 
 def gain(s_entropy, label, feature):
+    '''
+    This routine calculates the gain of a feature
+    '''
     values = np.unique(feature)
     g = s_entropy
     for val in values:
@@ -102,14 +114,13 @@ def id3(data, features, default):
         node.set_child(branch, deepcopy(child))
     return node
 
-def traverse(node, depth=0):
+def traverse(node, x):
     children = node.get_children()
-    for child in children.keys():
-        if isinstance(children[child], str):
-            print(child, children[child], node.get_feature())
-        else:
-            print("Decision", child, node.get_feature())
-            traverse(children[child], depth+1)
+    value = x[node.get_feature()]
+    if isinstance(children[value], str):
+        return children[value]
+    else:
+        traverse(children[value], x)
 
 def train(training_data):
     """
@@ -136,12 +147,10 @@ def cross_validate(data):
     ## combine train, classify and evaluate
     ## to perform 10 fold cross validation, print out the error rate for
     ## each fold and print the final, average error rate.
-    pass
+    folds = create_folds(data, 10)
 
 if __name__ == "__main__":
     debug = len(sys.argv) > 1 and sys.argv[1].lower() == 'debug'
 
     data = read_data("agaricus-lepiota.data")
-    #data = data[:1000]
-    print(len(data))
     cross_validate(data)
