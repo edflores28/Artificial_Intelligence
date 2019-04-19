@@ -1,21 +1,121 @@
 import sys
 import csv
+from collections import Counter
+from copy import deepcopy
+import numpy as np
 
+class Node:
+    def __init__(self, feature):
+        self.feature = feature
+        self.children = {}
 
-##
-## I'm leaving the shape of your data to you.
-## You may want to stick with our List of Lists format or
-## you may want to change to a List of Dicts.
-##
-def read_data():
-    pass
+    # def set_feature(self, feature):
+    #     self.feature = feature
+
+    def set_child(self, branch, node):
+        self.children[branch] = node
+
+    def get_feature(self):
+        return self.feature
+
+    def get_children(self):
+        return self.children
+
+    def display(self):
+        print("feature", self.feature)
+        print("children", self.children)
+
+def entropy(feature):
+    # Obtain the unique counts of the feature set
+    unique, counts = np.unique(feature, return_counts=True)
+    # Set the probabilities accordingly
+    p = counts / sum(counts)
+    # Return the value for entropy
+    return np.sum(np.negative(p)*np.log2(p))
+
+def gain(s_entropy, label, feature):
+    values = np.unique(feature)
+    g = s_entropy
+    for val in values:
+        total = label[feature == val]
+        g -= entropy(total)*(len(total)/len(feature))
+    return g
+
+def pick_best_feature(data, features):
+    # Transpose the data
+    data = data.T
+    # Index 0 contains the class values, calculate
+    # the entropy
+    set_entropy = entropy(data[0])
+    # Calculate all the gains for the given features
+    gains = [gain(set_entropy, data[0], data[x]) for x in features]
+    # Transpose data
+    data = data.T
+    # Return the best feature
+    return features[gains.index(max(gains))]
+
+def is_homogeneous(data):
+    if entropy(data.T[0]) == 0.0:
+        return True
+    else:
+        return False
+
+def get_majority_label(data):
+    # Obtain the labels and counts
+    labels, counts = np.unique(data.T[0], return_counts=True)
+    # Return the label with the maximum counts
+    return labels[np.argmax(counts)]
+
+def read_data(filename):
+    with open(filename, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        data = []
+        for row in csv_reader:
+            data.append([v for v in row])
+    return np.asarray(data)
+
+def id3(data, features, default):
+    # When the data is homogenous return the class label
+    if is_homogeneous(data):
+        return data[0][0]
+    # When the features list is empty return
+    # the majority class label
+    if not features:
+        return get_majority_label(data)
+    # When the data list contains just the y values
+    # return the default
+    if len(data.T) == 1:
+        return default
+    # Determine the best feature
+    best = pick_best_feature(data, features)
+    # Create a node
+    node = Node(best) 
+    # Remove the best feature from the list    
+    features.pop(features.index(best))
+    # Determine the default label
+    default_label = get_majority_label(data)
+    # Iterate over the values and recursivly call id3()     
+    for branch in np.unique(data.T[best]):
+        idx = data[:, best] == branch
+        subset = data[idx]
+        child = id3(subset, features, default_label)
+        node.set_child(branch, deepcopy(child))
+    return node
+
+def traverse(node, depth=0):
+    children = node.get_children()
+    for child in children.keys():
+        if isinstance(children[child], str):
+            print(child, children[child], node.get_feature())
+        else:
+            print("Decision", child, node.get_feature())
+            traverse(children[child], depth+1)
 
 def train(training_data):
     """
     takes the training data and returns a decision tree data structure or ADT.
     """
-    pass
-
+    return id3(training_data, [x for x in range(1, len(training_data[0]))], None)
 
 def classify(tree, data):
     """
@@ -41,5 +141,7 @@ def cross_validate(data):
 if __name__ == "__main__":
     debug = len(sys.argv) > 1 and sys.argv[1].lower() == 'debug'
 
-    data = read_data()
+    data = read_data("agaricus-lepiota.data")
+    #data = data[:1000]
+    print(len(data))
     cross_validate(data)
