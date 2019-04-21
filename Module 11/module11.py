@@ -10,9 +10,6 @@ class Node:
         self.feature = feature
         self.children = {}
 
-    # def set_feature(self, feature):
-    #     self.feature = feature
-
     def set_child(self, branch, node):
         self.children[branch] = node
 
@@ -27,6 +24,7 @@ def create_folds(data, k):
     This routine reads the csv file and
     creates k folds of the data set
     '''
+    shuffle(data)
     shuffle(data)
     fold_len = int(len(data)/k)
     return [data[i:i+fold_len] for i in range(0, len(data), fold_len)]
@@ -133,21 +131,46 @@ def classify(tree, data):
     takes the tree data structure/ADT and labeled/unlabeled data and 
     return a List of classifications.
     """
-    pass
-
+    classifications = []
+    for x in data:
+        classifications.append(traverse(tree, x))
+    return classifications
 
 def evaluate(actual, predicted):
     """
     takes a List of actual labels and a List of predicted labels
     and returns the error rate.
     """
-    pass
+    error = 0
+    length = len(actual)
+    for index in range(length):
+        if actual[index] != predicted[index]:
+            error += 1
+    return error*100/length
 
 def cross_validate(data):
     ## combine train, classify and evaluate
     ## to perform 10 fold cross validation, print out the error rate for
     ## each fold and print the final, average error rate.
     folds = create_folds(data, 10)
+    errors = []
+    # Iterate over the folds
+    for fold in range(len(folds)):
+        # Copy the entire data set
+        train_set = deepcopy(folds)
+        # Removing the fold from the training
+        # list since this will be the testing set
+        test_set = train_set.pop(fold)
+        train_set = np.asarray([item for sublist in train_set for item in sublist])
+        # Perform ID3 algorithm
+        root_node = train(train_set)
+        # Classify the test set
+        classifications = classify(root_node, test_set)
+        # Determine the error
+        error = evaluate(test_set.T[0], classifications)
+        errors.append(error)
+        print("Fold", fold+1, "error", str(error)+"%")
+    print("Average error", sum(errors)*100/len(folds))
 
 if __name__ == "__main__":
     debug = len(sys.argv) > 1 and sys.argv[1].lower() == 'debug'
