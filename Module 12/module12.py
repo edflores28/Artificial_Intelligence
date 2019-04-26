@@ -57,19 +57,60 @@ def determine_probability(feature, classes):
     return [p, e]
 
 def generate_table(feature, data, class_counts):
+    '''
+    This routine generates a probability table for
+    the given feature
+    
+    Args:
+        feature - the index of the feature
+        data - the data
+        class_counts - the dict containing labels and counts
+    Returns:
+        a dict in the form of {value: [P(p), P(e)], ..}
+    '''
     probs = {}
-    # This just gives column 0 and 1 of the matrix
+    # Only keep the class and feature column of the
+    # data set
     f_data = data[:, [0, feature]]
-    # This gives the values and their counts
+    # Get the values and counts of the feature column
     values, counts = np.unique(f_data.T[1], return_counts=True)
-    # Reduce the matrix, which only includes the selected featue value
+    # Iterate over the values and create a subset of the
+    # data that only contains the value and generate a 
+    # probability table
     for val in range(len(values)):
-        trimmed = f_data[:, 1] == values[val]
-        subset = f_data[trimmed]
+        # Create a subset of the data which only contains
+        # the val
+        subset = f_data[f_data[:, 1] == values[val]]
+        # Get the values and counts for the class labels
         sub_vals, sub_counts = np.unique(subset.T[0], return_counts=True)
+        # Determine the probability of val and class labels
         probs[values[val]] = determine_probability(dict(zip(sub_vals, sub_counts)), class_counts)
+    # Return the dict
     return probs
 
+def calculate_probability(x, class_value, probs):
+    '''
+    This routine determines the probabily for
+    x and the class value
+    
+    Args:
+        x - the test input
+        class_value - the label of the class
+        probs - the probability table
+    Returns:
+        the probability
+    '''
+    class_prob = 1
+    class_index = 0 if class_value == 'p' else 1
+    # Iterate over the features minus the class label
+    # and update class_prob
+    for feature in range(1, len(x)):
+        class_prob *= probs[feature][x[feature]][class_index]
+    # Finally multiply the class label probability
+    class_prob *= probs[0][class_value] / sum(probs[0].values())
+    # Return the value
+    return class_prob
+    
 def train(training_data):
     """
     takes the training data and returns the probabilities need for NBC.
@@ -78,7 +119,7 @@ def train(training_data):
         training_data - the training data
     Returns:
         a dict of probabilities ins the form of:
-        probs[feature] = {'value': [P(p), P(e)]}
+        probs[feature] = {feature: {'value': [P(p), P(e)], ..}, ..}
     """
     prob = {}
     # Get the class labels and their counts
@@ -97,9 +138,18 @@ def classify(probabilities, data):
     Takes the probabilities needed for NBC, applies them to the data, and
     return a List of classifications.
     """
-    pass
-
-
+    classifications = []
+    # Iterate over the data
+    for x in data:
+        # Calculate the values for p and e
+        p = calculate_probability(x, 'p', probabilities)
+        e = calculate_probability(x, 'e', probabilities)
+        total = p + e
+        # Add the dict to the list
+        classifications.append({'e': e/total, 'p': p/total})
+    # Return the list
+    return classifications
+    
 def evaluate(actual, predicted):
     """
     takes a List of actual labels and a List of predicted labels
@@ -114,9 +164,14 @@ def cross_validate(data):
     ## combine train, classify and evaluate
     ## to perform 10 fold cross validation, print out the error rate for
     ## each fold and print the final, average error rate.
-    train(data)
-    pass
-
+    probabilities = train(data)
+    test = data[:10]
+    classifications = classify(probabilities, test)
+    for x in classifications:
+        print(x)
+    for x in test:
+        print(x)
+        
 if __name__ == "__main__":
     debug = len(sys.argv) > 1 and sys.argv[1].lower() == 'debug'
 
