@@ -5,6 +5,39 @@ from collections import Counter
 from copy import deepcopy
 from random import shuffle
 
+def create_folds(data, k):
+    '''
+    This routine reads the csv file and
+    creates k folds of the data set
+
+    Args:
+        data - the data
+        k - the total folds
+    Returns:
+        a list of the data partitioned into folds
+    '''
+    # Shuffle the data a few times in order
+    # to randomize the set
+    shuffle(data)
+    shuffle(data)
+    folds = []
+    # Calculate the length for each fold
+    fold_len = int(len(data)/k)
+    # Create k-1 folds
+    for i in range(k-1):
+        fold = []
+        # Create the fold of size fold_len
+        while len(fold) < fold_len:
+            fold.append(data[0])
+            data = np.delete(data, 0, 0)  
+        # Add to the folds list
+        folds.append(fold)
+    # For the final fold add whatever remains in
+    # the data set
+    folds.append(data)
+    # Return the folds
+    return folds
+
 def read_data(filename):
     '''
     This routine reads the data from the file
@@ -43,13 +76,11 @@ def determine_probability(feature, classes):
         Returns:
             the probability       
         '''
+        # Set val_count to the value of the key. If key is
+        # not in the dict then set to 0
+        val_count = feature[value] if value in feature.keys() else 0
         # Calculate the probability with smoothing
-        try:
-            return (feature[value]+1)/(classes[value]+1)
-        # When the key is not present in the feature 
-        # dict apply just the smoothing
-        except:
-            return 1/(classes[value]+1)
+        return (val_count + 1)/(classes[value]+1)
     # Calculate P(p) and P(e)
     p = calculate(feature, 'p', classes)
     e = calculate(feature, 'e', classes)
@@ -73,7 +104,7 @@ def generate_table(feature, data, class_counts):
     # data set
     f_data = data[:, [0, feature]]
     # Get the values and counts of the feature column
-    values, counts = np.unique(f_data.T[1], return_counts=True)
+    values = np.unique(f_data.T[1])
     # Iterate over the values and create a subset of the
     # data that only contains the value and generate a 
     # probability table
@@ -105,12 +136,29 @@ def calculate_probability(x, class_value, probs):
     # Iterate over the features minus the class label
     # and update class_prob
     for feature in range(1, len(x)):
-        class_prob *= probs[feature][x[feature]][class_index]
+        try:
+            class_prob *= probs[feature][x[feature]][class_index]
+        except:
+            # When a feature value is not in the dict then
+            # just skip the feature. The +1 smoothing handles
+            # these cases
+            pass
     # Finally multiply the class label probability
     class_prob *= probs[0][class_value] / sum(probs[0].values())
     # Return the value
     return class_prob
     
+def get_max_label(prob_dict):
+    '''
+    This routine reutns the label with the highest probability
+
+    Args:
+        prob_dict - dict with labels and probabilities
+    Returns:
+        a class label
+    '''
+    return max(zip(prob_dict.values(), prob_dict.keys()))[1]
+
 def train(training_data):
     """
     takes the training data and returns the probabilities need for NBC.
@@ -154,24 +202,56 @@ def evaluate(actual, predicted):
     """
     takes a List of actual labels and a List of predicted labels
     and returns the error rate.
+
+     Args:
+        actual - the real results
+        predicted - the predicted results
+    Returns:
+        an error value   
     """
-    pass
+    error = 0
+    length = len(actual)
+    # Iterate over the actual and predicted values.
+    for index in range(length):
+        # Determine the label for the predicted dict and
+        # increment the error count if not equal
+        if get_max_label(predicted[index]) != actual[index]:
+            error += 1
+    # Return the error
+    return (error*100)/length
 
 def cross_validate(data):
-    ##
-    ## You can use your function from last week.
-    ##
-    ## combine train, classify and evaluate
-    ## to perform 10 fold cross validation, print out the error rate for
-    ## each fold and print the final, average error rate.
-    probabilities = train(data)
-    test = data[:10]
-    classifications = classify(probabilities, test)
-    for x in classifications:
-        print(x)
-    for x in test:
-        print(x)
-        
+    ''' 
+    combine train, classify and evaluate
+    to perform 10 fold cross validation, print out the error rate for
+    each fold and print the final, average error rate.
+
+    Args:
+        data - the data set
+    '''
+    folds = create_folds(data, 10)
+    errors = []
+    print()
+    # Iterate over the folds
+    for fold in range(len(folds)):
+        # Copy the entire data set
+        train_set = deepcopy(folds)
+        # Removing the fold from the training
+        # list since this will be the testing set
+        test_set = np.asarray(train_set.pop(fold))
+        train_set = np.asarray([item for sublist in train_set for item in sublist])
+        # Perform ID3 algorithm
+        probabilities = train(train_set)
+        # Classify the test set
+        classifications = classify(probabilities, test_set)
+        # Determine the error
+        error = evaluate(test_set.T[0], classifications)
+        errors.append(error)
+        print("Fold", fold+1, "error", str(error)+"%")
+    print()
+    print("Average error", sum(errors)/len(folds))
+    print()
+
 if __name__ == "__main__":
     debug = len(sys.argv) > 1 and sys.argv[1].lower() == 'debug'
 
