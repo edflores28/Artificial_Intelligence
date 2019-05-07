@@ -193,16 +193,8 @@ def get_best_fit(population):
     Args:
         population - the entire population
     Returns:
-        Nothing
+        best fit individual
     '''
-    best = -9999
-    best_index = 0
-    for indv in range(len(population)):
-        if population[indv][0] > best:
-            best = population[indv][0] 
-            best_index = indv
-    #print("GGGGGGGGGGGGGGGGGGGGGGGGG", sorted(deepcopy(population), key=itemgetter(0))[-1:])
-    #return deepcopy(population[best_index])
     return sorted(deepcopy(population), key=itemgetter(0))[-1:][0]
 
 def print_params(parameters, is_binary):
