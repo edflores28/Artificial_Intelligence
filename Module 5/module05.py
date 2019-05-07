@@ -6,6 +6,7 @@ from random import sample
 from copy import deepcopy
 from random import gauss, random
 from collections import deque
+from operator import itemgetter
 from decimal import Decimal
 from io import StringIO
 
@@ -27,7 +28,7 @@ def convert_bin(individual):
         values.append((float(value) - 512.00) / 100)
     return values
 
-def generate_population(size, function, minimization, is_binary):
+def generate_population(size, function, minimization, is_binary, n=10):
     '''
     This routine generates a random population
 
@@ -38,7 +39,6 @@ def generate_population(size, function, minimization, is_binary):
     Returns:
         the population with fitness scores
     '''
-    TOTAL_VARIABLES = 10
     # Generator to generate float values in specific range
     def float_range(start, stop, increment):
         start = Decimal(start)
@@ -47,20 +47,15 @@ def generate_population(size, function, minimization, is_binary):
             yield float(start)
             start += increment
     population = []
-    values = []
-    multiplier = 1
     # Binary ga only uses values list of 0 and 1
     # Otherwise for real ga set values list
-    # to -5.12 to 5.12
-    if is_binary:
-        values = [0, 1]
-        multiplier = TOTAL_VARIABLES
-    else:
-        values = list(float_range(-5.12, 5.12, Decimal('0.01')))
+    # to -5.12 to 5.12   
+    values = [0, 1] if is_binary else list(float_range(-5.12, 5.12, Decimal('0.01')))
+    multiplier = n if is_binary else 1
     # Create the populate for the desired size and also
     # calculate the fitness scores
     while len(population) < size:
-        individual = deepcopy([choice(values) for x in range(TOTAL_VARIABLES*multiplier)])
+        individual = deepcopy([choice(values) for x in range(n*multiplier)])
         score = []
         if is_binary:
             score = fitness(convert_bin(individual), function, minimization)
@@ -79,31 +74,10 @@ def select_parents(population, total):
     Returns
         parent_1 and parent_2
     '''
-    # Pick total number of parents
-    parents = sample(range(len(population)), total)
-    # Set best and second best variables to 0
-    best_value = -9999
-    best_index = 0
-    second_value = -9999
-    second_index = 0
-    # Iterate over the selected parents and
-    # find the best one
-    for x in parents:
-        if population[x][0] > best_value:
-            best_value = population[x][0]
-            best_index = x
-    # Iterate over the selected parents and
-    # find the second best one
-    for x in parents: 
-        if population[x][0] > second_value and population[x][0] < best_value:
-                second_value = population[x][0]
-                second_index = x
-    # Put the indices in a list and sort it.
-    indices = [best_index, second_index]
-    indices.sort()
-    parent_2 = population.pop(indices[1])
-    parent_1 = population.pop(indices[0])
-    return parent_1, parent_2
+    # Get a sample of the total number of parents
+    # and get the top 2 best values base on the fitness
+    # score in index 0
+    return tuple(sorted(sample(population, total), key=itemgetter(0))[-2:])
            
 def crossover(parent_1, parent_2, rate):
     '''
@@ -190,7 +164,7 @@ def fitness(individual, function, minimization):
     '''
     score = function(individual)
     if minimization:
-        return 1 / (1 - score)
+        return 1 / (1 + score)
     else:
         return score
 
@@ -227,7 +201,9 @@ def get_best_fit(population):
         if population[indv][0] > best:
             best = population[indv][0] 
             best_index = indv
-    return deepcopy(population[best_index])
+    #print("GGGGGGGGGGGGGGGGGGGGGGGGG", sorted(deepcopy(population), key=itemgetter(0))[-1:])
+    #return deepcopy(population[best_index])
+    return sorted(deepcopy(population), key=itemgetter(0))[-1:][0]
 
 def print_params(parameters, is_binary):
     '''
