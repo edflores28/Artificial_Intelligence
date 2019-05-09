@@ -28,14 +28,13 @@ def convert_bin(individual):
         values.append((float(value) - 512.00) / 100)
     return values
 
-def generate_population(size, function, minimization, is_binary, n=10):
+def generate_population(size, function, is_binary, n=10):
     '''
     This routine generates a random population
 
     Args:
         size - the total population size
         function - the shift sphere function
-        minimization - flag indicating minimization
     Returns:
         the population with fitness scores
     '''
@@ -58,9 +57,9 @@ def generate_population(size, function, minimization, is_binary, n=10):
         individual = deepcopy([choice(values) for x in range(n*multiplier)])
         score = []
         if is_binary:
-            score = fitness(convert_bin(individual), function, minimization)
+            score = fitness(convert_bin(individual), function)
         else:
-            score = fitness(individual, function, minimization)
+            score = fitness(individual, function)
         population.append([score] + [individual])
     return population
 
@@ -97,7 +96,8 @@ def crossover(parent_1, parent_2, rate):
     # create offsping
     if random() <= rate:
         # Generate a crossover point
-        index = randrange(len(parent_1[1])) + 1
+        #index = randrange(len(parent_1[1])) + 1
+        index = randrange(1, len(parent_1[1])-2)
         # Create children based on the crossover point
         child_1 = deepcopy(parent_2[1][0:index] + parent_1[1][index:])
         child_2 = deepcopy(parent_1[1][0:index] + parent_2[1][index:])
@@ -152,7 +152,7 @@ def mutate(child_1, child_2, rate, is_binary, sigma=0.0):
     child_2 = mutate_single(child_2, rate, is_binary, sigma)
     return child_1, child_2
 
-def fitness(individual, function, minimization):
+def fitness(individual, function):
     '''
     This routine calculates the fitness score
 
@@ -162,13 +162,9 @@ def fitness(individual, function, minimization):
     Returns:
         The fitness score
     '''
-    score = function(individual)
-    if minimization:
-        return 1 / (1 + score)
-    else:
-        return score
+    return 1 / (1 + function(individual))
 
-def calculate_scores(child_1, child_2, function, minimization, is_binary):
+def calculate_scores(child_1, child_2, function, is_binary):
     '''
     This routine calculates the fitness score of the offspring
 
@@ -179,11 +175,11 @@ def calculate_scores(child_1, child_2, function, minimization, is_binary):
         returns the offspring with the fitness score
     '''
     if is_binary:
-        fitness_1 = fitness(convert_bin(child_1), function, minimization)
-        fitness_2 = fitness(convert_bin(child_2), function, minimization)
+        fitness_1 = fitness(convert_bin(child_1), function)
+        fitness_2 = fitness(convert_bin(child_2), function)
     else:
-        fitness_1 = fitness(child_1, function, minimization)
-        fitness_2 = fitness(child_2, function, minimization)
+        fitness_1 = fitness(child_1, function)
+        fitness_2 = fitness(child_2, function)
     return [fitness_1] + [child_1], [fitness_2] + [child_2]
 
 def get_best_fit(population):
@@ -241,7 +237,7 @@ def generic_algorithm(parameters, debug, is_binary):
         Nothing
     '''
     # Create a random population
-    population = generate_population(parameters['population'], parameters['f'], parameters['minimization'], is_binary)
+    population = generate_population(parameters['population'], parameters['f'], is_binary)
     # Iterate for a total generations
     for generation in range(parameters['generations']):
         # Select two parents
@@ -251,7 +247,7 @@ def generic_algorithm(parameters, debug, is_binary):
         # Mutate the children
         child_1, child_2 = mutate(child_1, child_2, parameters['mutation_rate'], is_binary, parameters['sigma'])
         # Calculate the fitness scores for the children
-        child_1, child_2, = calculate_scores(child_1, child_2, parameters['f'], parameters['minimization'], is_binary)
+        child_1, child_2, = calculate_scores(child_1, child_2, parameters['f'], is_binary)
         # Add the children back to the population
         population.append(child_1)
         population.append(child_2)
@@ -281,10 +277,9 @@ if __name__ == "__main__":
 
     parameters = {
         "f": lambda xs: shifted_sphere( 0.5, xs),
-        "minimization": True,
         "crossover_rate": 0.8,
         "mutation_rate": 0.05,
-        "generations": 800,
+        "generations": 2000,
         "tournament_total": 15,
         "population": 500,
         "sigma": 0 # Not used for binary ga, still needs to be defined.
@@ -294,10 +289,9 @@ if __name__ == "__main__":
 
     parameters = {
         "f": lambda xs: shifted_sphere( 0.5, xs),
-        "minimization": True,
-        "crossover_rate": 0.9,
-        "mutation_rate": 0.1,
-        "generations": 800,
+        "crossover_rate": 0.85,
+        "mutation_rate": 0.05,
+        "generations": 2000,
         "tournament_total": 15,
         "population": 500,
         "sigma": 0.7
